@@ -13,34 +13,40 @@ typedef struct{
 class Input_estimate:dynamical_system
 {
 public:
-    Input u[2];
+typedef struct{
+    double v[2];//速度の絶対値
+    double w[2];//角速度
+}Time_series_double;
+
+    Input u;//予測値
+    Time_series_double time_series_double;//時系列
 
     Input_estimate(){//初期化
-        u[0].v = 0;
-        u[0].w = 0;
-        u[1].v = 0;
-        u[1].w = 0;
+        time_series_double.v[0] = 0;
+        time_series_double.w[0] = 0;
+        time_series_double.v[1] = 0;
+        time_series_double.w[1] = 0;
     }
 
-    void calc(){//u,wを更新
-        /*
-        double v_next;
-        double w_next; 
-        v_next = u[1].v+(u[1].v-u[0].v)/dt*dt;
-        w_next = u[1].w+(u[1].w-u[0].w)/dt*dt;
-        double v_temp,w_temp;
-        v_temp = u[1].v;
-        w_temp = u[1].w;
-        u[0].v = v_temp;
-        u[0].w = w_temp;
-        u[1].v = v_next;
-        u[1].w = w_next;
-        */
-        return ;
+    
+    void update(Input next_est){//時系列を更新
+        time_series_double.v[0] = time_series_double.v[1];
+        time_series_double.w[0] = time_series_double.w[1];
+        time_series_double.v[1] = next_est.v;
+        time_series_double.w[1] = next_est.w;
+        return;
     }
+
+    
+    void estimate(){//予測値を更新
+        u.v = time_series_double.v[1]*2-time_series_double.v[0];//time_series_double.v[1]+(time_series_double.v[1]-time_series_double.v[0])/dt*dt;
+        u.w = time_series_double.w[1]*2-time_series_double.w[0];//time_series_double.w[1]+(time_series_double.w[1]-time_series_double.w[0])/dt*dt;
+        return;
+    }
+    
 
     void debug(){
-        cout<<"Input_estimate"<<endl;
+        cout<<"v"<<time_series_double.v[0]<<" "<<time_series_double.v[1]<<endl;
     }
 };
 #endif

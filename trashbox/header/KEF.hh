@@ -100,12 +100,9 @@ public:
     }
 
     void calc(Encoder encoder,Input_estimate est){//encoder.x, encoder.yの更新を行う
-        u = est.u[1];//EKFの入力をInput_estimateの入力に更新した
-        //ここに下でコメントアウトした部分をうまいことつないでください。
-        return;
-    }
-    //たぶん const は引数の値を変えないためにもちいるものなので、ここでは更新したいから使っていません。
+        u = est.u;//EKFの入力にInput_estimateの予測値を代入した
 
+        //ここに下でコメントアウトした部分をうまいこといれてください。
     /*
         State state_evolution(const State &x,const Input &u){
             State x_next;
@@ -192,6 +189,24 @@ public:
             return;
         }
     */
+        //
+        return;
+    }
+    //たぶん const は引数の値を変えないためにもちいるものなので、ここでは更新したいから使っていません。
+
+    Input next_est(){
+        Input next_u;
+        next_u.v = u.v;
+        next_u.w = u.w;
+        return next_u;
+    }
+
+    void output(){//状態の出力
+        cout<<x.x<<" "<<x.y<<" "<<x.z<<endl;
+        return;
+    }
+
+    
 };
 /*
 Matrix2d Rotation2d(const double theta){
