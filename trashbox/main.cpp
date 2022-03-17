@@ -1,5 +1,6 @@
 #include <iostream>
 #include "Eigen/Dense"
+#include <math.h>
 
 using namespace std;
 
@@ -37,7 +38,7 @@ int main(int argc,char const *argv[]){
     int e_z = 0;
     //エンコーダ　と　カルマンフィルタのセットアップ
     Encoder enc(0,0,0);
-    EKF ekf(0,0,0);
+    EKF ekf(0,0,0,1e-3);
     set_up(enc,ekf);
 
 
