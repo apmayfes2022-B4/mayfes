@@ -192,7 +192,6 @@ public:
         //
         return;
     }
-    //たぶん const は引数の値を変えないためにもちいるものなので、ここでは更新したいから使っていません。
 
     Input next_est(){
         Input next_u;

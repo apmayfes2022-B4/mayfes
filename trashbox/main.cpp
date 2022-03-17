@@ -83,4 +83,3 @@ int main(int argc,char const *argv[]){
 }
 
 //コンパイルはとりあえず g++ main.cpp -I includes/include.hh -std=c++11 で
-//できれば少なくともコンパイルが通ることを確認してから更新してもらえると嬉しいです。
