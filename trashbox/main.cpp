@@ -25,6 +25,8 @@ void calc(){//1ステップ計算する
 
 //グローバルに defineしたいんだけどどこに書くのがいいんだろうなあ
 
+bool contenue = 1;
+
 
 
 int main(int argc,char const *argv[]){
@@ -35,15 +37,20 @@ int main(int argc,char const *argv[]){
     int e_x = 0;
     int e_y = 0;
     int e_z = 0;
+
+    auto cc;
     //エンコーダ　と　カルマンフィルタのセットアップ
     Encoder enc(0,0,0);
     EKF ekf(0,0,0);
     set_up(enc,ekf);
 
-
     ekf.debug();
     //フィルタで計算
-    while(1==0){
+    while(contenue){
+        cin >> x_c >> y_c >> w_j >> e_x >> e_y >> e_z >> cc;
+        if(cc == 0){
+            contenue = 0;
+        }
         calc();
     }
     return 0;
