@@ -1,7 +1,6 @@
-#include "../header/KEF.hh"
+#include "../others/dynamical_system.hh"
+
 #include "../header/Encoder.hh"
-
-
-#define dt = 0.01
-
+#include "../header/input_estimate.hh"
+#include "../header/KEF.hh"
 
