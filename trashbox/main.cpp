@@ -1,51 +1,50 @@
-#include <iostream>
-#include "Eigen/Dense"
-#include <math.h>
-#include <vector>
-using namespace std;
-
 #include "includes/include.hh"
 /*
 (目標)
 入力が ./a.out 1 2 3 1 3 3 1 4 4 ...みたいなかんじに入ってきて
 出力を　[1 1 1], [2 1 3], .. ってかえすことにしておく
 
-現在どうすればいいかわかんない(on line 処理?)
+(on line 処理?)
 */
 
 
 void set_up(Encoder enc,Input_estimate est,EKF ekf){
-    ekf.u = est.u;
+    //ekf.u = est.u;
     //セットアップ ここで0以外の値をいれることにする。例としては ekf.y.x_c = 1;とか
     return;
 }
 
-
+void calc(Encoder enc,Input_estimate est,EKF ekf,Obs y_now,Scale ee){
+    enc.update(ee);
+    est.update(ekf.x_series);
+    ekf.update(enc,est,y_now);//ここの実装を期待してます。//推定(線形補間)の実行もここの中
+    ekf.output();//x_k|kを出力
+    return;
+}
 
 //グローバルに defineしたい定数
-
-bool go_on = 1;//入力がつづくかどうか
-
-// あんまりここ(main.cpp)で定数を定義してほしくないけど書くならここかな
-
-
+bool go_on = true;//入力がつづくかどうか
 int main(int argc,char const *argv[]){
-    //初期値//書かなくていい気がしてきた。
 
     //エンコーダ　と　推定機　と　カルマンフィルタのセットアップ     //多分もっと頭の良い書き方があるけど、とりまこれで
     Encoder enc;
     Input_estimate est;
     EKF ekf;
     set_up(enc,est,ekf);
-    bool hoge;
+    //bool hoge;//これなんですか？
     
     //逐一フィルタで計算
-    while(go_on){
+    while(go_on==1){
         // 観測
-        double x_c,y_c,w_j;
-        int e_x,e_y,e_z;
+        Camera came;
+        double w_j;
+        Scale ee;
         bool cc;
-        cin >> x_c >> y_c >> w_j >> e_x >> e_y >> e_z >> cc;//入力
+        cin >> came.x >> came.y >> w_j >> ee.x >> ee.y >> ee.z >> cc;//入力
+
+        Obs y_now;
+        y_now << came.x, came.y, ekf.y(2)+w_j, ee.x, ee.y, ee.z;//ekf.y(2)+w_j
+
         /*
         1.0 1.0 0.5 1 2 4 1
         2.0 0.0 0.5 2 2 3 1
@@ -55,33 +54,14 @@ int main(int argc,char const *argv[]){
         */
 
         if(cc == 0){
-            go_on = 0;//終了判断
+            go_on = false;//終了判断
         }
-
-        // 入力の推定
-        enc.update(e_x,e_y,e_z);
-        vector<double> omega(3);
-        omega = enc.Omega();
-        // ekfに反映
-        ekf.y << x_c, y_c, ekf.y(2)+w_j, omega[0], omega[1], omega[2];
-        ekf.output();
-        auto temp = ekf.x_series;
-        //推定(線形補間)の実行
-        est.estimate(temp);
-        est.debug();
-        
-        ekf.calc(enc,est);//ここの実装を期待してます。
-        ekf.output();//出力
-
-        /* 更新と補間がある？x時系列から求めるだけなので更新せず片方だけでいい気がしている
-        Input next_est;
-        next_est = ekf.next_est();
-        est.update(next_est);//ekfの値から時系列を更新
-        */
-        //est.debug();
+        calc(enc,est,ekf,y_now,ee);
     }
     
     return 0;
 }
 
-//コンパイルはとりあえず g++ main.cpp -I includes/include.hh -std=c++11 で
+//コンパイルはとりあえず g++ main.cpp -I includes/include.hh -std=c++17 で
+
+//あと知ってるかもしれないですけど/**/で複数行コメントアウトができますよ

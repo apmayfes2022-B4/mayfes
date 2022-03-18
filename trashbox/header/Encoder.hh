@@ -3,8 +3,17 @@
 
 #define initial 0 //初期値
 
+#include "../Eigen/Dense"
 #include "../others/dynamical_system.hh"
 #include <iostream>
+
+typedef struct _scale{
+    int x,y,z;
+}Scale;
+
+typedef struct _camera{
+    int x,y;
+}Camera;
 
 
 class Encoder:dynamical_system
@@ -35,14 +44,14 @@ typedef struct{
         return omega;
     }
 
-    void update(const int &e_x,const int &e_y,const int &e_z){
+    void update(Scale ee){
         // time_seriesの更新
         time_series.x[0] = time_series.x[1];
         time_series.y[0] = time_series.y[1];
         time_series.z[0] = time_series.z[1];
-        time_series.x[1] = e_x;
-        time_series.y[1] = e_y;
-        time_series.z[1] = e_z;
+        time_series.x[1] = ee.x;
+        time_series.y[1] = ee.y;
+        time_series.z[1] = ee.z;
         return;
     }
 
