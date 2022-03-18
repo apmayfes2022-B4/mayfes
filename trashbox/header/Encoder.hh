@@ -35,7 +35,7 @@ typedef struct{
         return omega;
     }
 
-    void update(int e_x,int e_y,int e_z){
+    void update(const int &e_x,const int &e_y,const int &e_z){
         // time_seriesの更新
         time_series.x[0] = time_series.x[1];
         time_series.y[0] = time_series.y[1];
@@ -47,8 +47,8 @@ typedef struct{
     }
 
     void debug(){
-        //cout<<"x"<<time_series.x[0]<<" y"<<time_series.y[0]<<" z"<<time_series.z[0]<<endl;
-        cout<<"x"<<time_series.x[1]<<" y"<<time_series.y[1]<<" z"<<time_series.z[1]<<endl;
+        cout<<"previously, x: "<<time_series.x[0]<<", y: "<<time_series.y[0]<<", z: "<<time_series.z[0]<<endl;
+        cout<<"x: "<<time_series.x[1]<<", y: "<<time_series.y[1]<<", z: "<<time_series.z[1]<<endl;
         return ;
     }
 };

@@ -15,6 +15,7 @@ using namespace std;
 
 
 void set_up(Encoder enc,Input_estimate est,EKF ekf){
+    ekf.u = est.u;
     //セットアップ ここで0以外の値をいれることにする。例としては ekf.y.x_c = 1;とか
     return;
 }
@@ -23,23 +24,9 @@ void set_up(Encoder enc,Input_estimate est,EKF ekf){
 
 //グローバルに defineしたい定数
 
-bool contenue = 1;//入力がつづくかどうか
+bool go_on = 1;//入力がつづくかどうか
 
 // あんまりここ(main.cpp)で定数を定義してほしくないけど書くならここかな
-/*
-    const double deltat=0.0; // EKFの更新間隔
-    const Matrix<double,2,3> d;
-    const Matrix<double,2,3> e;
-    const double a=0;
-    Matrix3d Xi;
-    Matrix<double,6,6> Eta;
-
-    vector<Vector3d> states(4); // 状態の初期設定(x,y,theta)
-    Matrix3d state_var; // 共分散行列の初期設定
-    Vector2d u;
-    Matrix<double,6,1> y;
-*/
-
 
 
 int main(int argc,char const *argv[]){
@@ -50,9 +37,11 @@ int main(int argc,char const *argv[]){
     Input_estimate est;
     EKF ekf;
     set_up(enc,est,ekf);
+    bool hoge;
     
     //逐一フィルタで計算
-    while(contenue){
+    while(go_on){
+        // 観測
         double x_c,y_c,w_j;
         int e_x,e_y,e_z;
         bool cc;
@@ -64,18 +53,31 @@ int main(int argc,char const *argv[]){
         4.0 1.0 0.5 4 2 1 0
         こんな感じの入力をしてデバッグしてみてください
         */
+
         if(cc == 0){
-            contenue = 0;//終了判断
+            go_on = 0;//終了判断
         }
 
+        // 入力の推定
         enc.update(e_x,e_y,e_z);
-        est.estimate();//推定(線形補間)の実行
-        //ekf.calc(enc,est);//ここの実装を期待してます。
+        vector<double> omega(3);
+        omega = enc.Omega();
+        // ekfに反映
+        ekf.y << x_c, y_c, ekf.y(2)+w_j, omega[0], omega[1], omega[2];
+        ekf.output();
+        auto temp = ekf.x_series;
+        //推定(線形補間)の実行
+        est.estimate(temp);
+        est.debug();
+        
+        ekf.calc(enc,est);//ここの実装を期待してます。
         ekf.output();//出力
 
+        /* 更新と補間がある？x時系列から求めるだけなので更新せず片方だけでいい気がしている
         Input next_est;
         next_est = ekf.next_est();
         est.update(next_est);//ekfの値から時系列を更新
+        */
         //est.debug();
     }
     

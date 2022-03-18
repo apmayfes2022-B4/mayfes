@@ -6,6 +6,6 @@ using place = pair<double,double>;
 class dynamical_system
 {
 public:
-    double dt;
+    double dt=1e-2;
 };
 #endif
