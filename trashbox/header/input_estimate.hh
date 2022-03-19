@@ -26,7 +26,7 @@ typedef struct{
     }
 
     
-    void update(vector<State> x_series){//時系列を更新
+    void update(const vector<State> &x_series){//時系列を更新
         time_series_double.v[0] = time_series_double.v[1];
         time_series_double.w[0] = time_series_double.w[1];
         time_series_double.v[1] = u(0);
@@ -36,18 +36,6 @@ typedef struct{
         u(1) = (x_series[sz-1](1)-x_series[sz-2](1))/dt;//time_series_double.w[1]+(time_series_double.w[1]-time_series_double.w[0])/dt*dt;
         return;
     }
-    
-    
-    /*
-    void estimate(const vector<State,Eigen::aligned_allocator<State> > &state_series){// 型がバグるので取り敢えず（要修正）
-        auto latest = state_series.back();
-        auto sz = state_series.size();
-        auto semilatest = state_series[sz-2];
-        auto vel = latest-semilatest;
-        u[0] = sqrt(pow(vel[0],2)+pow(vel[1],2));// v
-        u[1] = vel(2);// w
-    }
-    */
     
     void debug(){
         cout << "debugging input estimation" << endl;

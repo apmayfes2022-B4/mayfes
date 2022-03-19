@@ -76,7 +76,11 @@ public:
         State zero_vec = VectorXd::Zero(3);
         State_Var zero_mat = MatrixXd::Zero(3,3);
         x_series.push_back(x);
-        //P_series.push_back(P);
+        P_series.push_back(P);
+        //あとでエラーを吐かないようにするため//条件分岐よりはよいかな。
+        x_series.push_back(x);
+        P_series.push_back(P);
+        //
         for (int i = 0; i < 3; i++){x_series.push_back(zero_vec);P_series.push_back(zero_mat);}// 時系列を空で入れておく（3は{好きな長さ-1}）
         dt = 0.01;
     }
