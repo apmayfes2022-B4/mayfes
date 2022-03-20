@@ -8,13 +8,13 @@
 */
 
 
-void set_up(Encoder enc,Input_estimate est,EKF ekf){
+void set_up(Kalman::Encoder enc,Kalman::Input_estimate est,Kalman::EKF ekf){
     //ekf.u = est.u;
     //セットアップ ここで0以外の値をいれることにする。例としては ekf.y.x_c = 1;とか
     return;
 }
 
-void calc(Encoder enc,Input_estimate est,EKF ekf,Obs y_now,Scale ee){
+void calc(Kalman::Encoder enc,Kalman::Input_estimate est,Kalman::EKF ekf,Obs y_now,Kalman::Scale ee){
     enc.update(ee);
     est.update(ekf.x_series);
     ekf.update(enc,est,y_now);//ここの実装を期待してます。//推定(線形補間)の実行もここの中
@@ -25,22 +25,21 @@ void calc(Encoder enc,Input_estimate est,EKF ekf,Obs y_now,Scale ee){
 //グローバルに defineしたい定数
 bool go_on = true;//入力がつづくかどうか
 int main(int argc,char const *argv[]){
-
     //エンコーダ　と　推定機　と　カルマンフィルタのセットアップ     //多分もっと頭の良い書き方があるけど、とりまこれで
-    Encoder enc;
-    Input_estimate est;
-    EKF ekf;
+    Kalman::Encoder enc;
+    Kalman::Input_estimate est;
+    Kalman::EKF ekf;
     set_up(enc,est,ekf);
     //bool hoge;//これなんですか？
     
     //逐一フィルタで計算
     while(go_on==1){
         // 観測
-        Camera came;
+        Kalman::Camera came;
         double w_j;
-        Scale ee;
+        Kalman::Scale ee;
         bool cc;
-        cin >> came.x >> came.y >> w_j >> ee.x >> ee.y >> ee.z >> cc;//入力
+        std::cin >> came.x >> came.y >> w_j >> ee.x >> ee.y >> ee.z >> cc;//入力
 
         Obs y_now;
         y_now << came.x, came.y, ekf.y(2)+w_j, ee.x, ee.y, ee.z;//ekf.y(2)+w_j
@@ -63,5 +62,3 @@ int main(int argc,char const *argv[]){
 }
 
 //コンパイルはとりあえず g++ main.cpp -I includes/include.hh -std=c++17 で
-
-//あと知ってるかもしれないですけど/**/で複数行コメントアウトができますよ

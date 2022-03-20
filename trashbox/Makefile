@@ -8,7 +8,7 @@ LIBDIR =
 LIBS = 
 $(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(LIDIR) $(LIBS) 
-$(OBJ):$(SRCS)
+$(OBJS):$(SRCS)
 	$(CC) $(CFLAGS) $(INCDIR) -c $(SRCS) 
 
 all: clean $(OBJS) $(TARGET)
