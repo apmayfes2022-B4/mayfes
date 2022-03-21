@@ -40,15 +40,14 @@ int main(int argc,char const *argv[]){
         Kalman::Scale ee;
         bool cc;
         std::cin >> came.x >> came.y >> w_j >> ee.x >> ee.y >> ee.z >> cc;//入力
-
         Obs y_now;
         y_now << came.x, came.y, ekf.y(2)+w_j, ee.x, ee.y, ee.z;//ekf.y(2)+w_j
-
         /*
         1.0 1.0 0.5 1 2 4 1
         2.0 0.0 0.5 2 2 3 1
         3.0 1.0 0.5 3 2 2 1
         4.0 1.0 0.5 4 2 1 0
+        10.0258 0.0581536 0.015383 1 0 0 1
         こんな感じの入力をしてデバッグしてみてください
         */
 

@@ -15,7 +15,7 @@ namespace Kalman
     }Scale;
 
     typedef struct _camera{
-        int x,y;
+        double x,y;
     }Camera;
 
     class Encoder:dynamical_system
