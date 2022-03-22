@@ -1,26 +1,24 @@
 #ifndef ENCODER_CLASS__
 #define ENCODER_CLASS__
 
-#define initial 0 //初期値
-
-#include "../Eigen/Dense"
+//#include "../Eigen/Dense"
 #include "../others/dynamical_system.hh"
-#include <iostream>
+//#include <iostream>
 
 
 namespace Kalman
 {
-    typedef struct _scale{
+    typedef struct{
         int x,y,z;
     }Scale;
 
-    typedef struct _camera{
-        int x,y;
+    typedef struct{
+        double x,y;
     }Camera;
 
-    class Encoder:dynamical_system
+    class Encoder:public dynamical_system
     {
-    public:
+    private:
     typedef struct{
         int x[2];
         int y[2];
@@ -28,7 +26,9 @@ namespace Kalman
     }Time_series;
 
         Time_series time_series;
+        double trans_coefficient;//エンコーダ目盛りを回転角度に翻訳
 
+    public:
         Encoder(){
             time_series.x[0] = 0;
             time_series.x[1] = 0;
@@ -36,14 +36,23 @@ namespace Kalman
             time_series.y[1] = 0;
             time_series.z[0] = 0;
             time_series.z[1] = 0;
+            set_dt(0.001);
+            trans_coefficient = 0.01;
         }
 
         std::vector<double> Omega(){//角速度の計算
             std::vector<double> omega(3); 
-            omega[0] = (time_series.x[1]-time_series.x[0])/dt;
-            omega[1] = (time_series.y[1]-time_series.y[0])/dt;
-            omega[2] = (time_series.z[1]-time_series.z[0])/dt;
+            double delta_t = get_dt();
+            omega[0] = (time_series.x[1]-time_series.x[0])/delta_t*trans_coefficient;
+            omega[1] = (time_series.y[1]-time_series.y[0])/delta_t*trans_coefficient;
+            omega[2] = (time_series.z[1]-time_series.z[0])/delta_t*trans_coefficient;
             return omega;
+        }
+
+        void show_Omega(){
+            double delta_t = get_dt();
+            std::cout<<"omega[0] = "<<(time_series.x[1]-time_series.x[0])/delta_t*trans_coefficient<<"omega[1] = "<<(time_series.y[1]-time_series.y[0])/delta_t*trans_coefficient<<"omega[2] = "<<(time_series.z[1]-time_series.z[0])/delta_t*trans_coefficient<<std::endl;
+            return;
         }
 
         void update(Scale ee){

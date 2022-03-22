@@ -4,21 +4,9 @@
 #include "../Eigen/Dense"
 #include "../others/dynamical_system.hh"
 
-// typedef struct _Observable{
-//     double x_c;//カメラ x
-//     double y_c;//カメラ y
-//     double wj;//ジャイロセンサ
-//     vector<double> th{0,0,0};
-// }Observable;
-// typedef struct _State{
-//     double x;
-//     double y;
-//     double z;
-// }State;
-
 namespace Kalman
 {
-    class EKF:dynamical_system
+    class EKF:public dynamical_system
     {
     private:
     //車のモデルはここ
@@ -50,48 +38,74 @@ namespace Kalman
             }
         };
 
-    public:
-        Obs y;
         State x;
         Input u;
-        std::vector<State> x_series; // 状態の時系列 
+        std::vector<State> x_series; // 状態の時系列 (2つはいっていればいい)
         State_Var P;//3*3行列
-        std::vector<State_Var> P_series; // 共分散の時系列 
+        std::vector<State_Var> P_series; // 共分散の時系列 (2つはいっていればいい)
         Car car;
-        
+
+    public:
         //初期化　construct
         EKF(){//とりあえず全部0で初期化しておきます。0以外を入れたい時はmain.cpp の　set_up()で入れることにしましょう。
-            y << 0, 0, 0, 0, 0, 0;
+            State x1;State_Var P1;
+            x1 << 0, 0, 0;
+            P1 << 0, 0, 0,
+                 0, 0, 0,
+                 0, 0, 0;
+
+            //y << 0, 0, 0, 0, 0, 0;
             x << 0, 0, 0;
             P << 0, 0, 0,
                  0, 0, 0,
                  0, 0, 0;
+
             State zero_vec = Eigen::VectorXd::Zero(3);
             State_Var zero_mat = Eigen::MatrixXd::Zero(3,3);
+            x_series.push_back(x1);
+            P_series.push_back(P1);
+
             x_series.push_back(x);
             P_series.push_back(P);
-            //あとでエラーを吐かないようにするため//条件分岐よりはよいかな。
-            x_series.push_back(x);
-            P_series.push_back(P);
-            dt = 0.01;
+            set_dt(0.01);
+        }
+
+        void set_u(Input uu){
+            u = uu;
+            return;
+        }
+
+        void show_u(){
+            std::cout<< u <<std::endl;
+            return;
+        }
+
+        void show_x(){
+            std::cout<< x << std::endl;
+            return;
         }
     
         void debug(){
             std::cout << "debuggin EKF" << std::endl;
-            std::cout << "y is " << y.transpose() << "x is " << x.transpose() 
-            << "u is " << u.transpose() << "P is " << P << std::endl;//これで出力できるのつよすぎ(感嘆)
+            std::cout << "x:" << x.transpose() <<std::endl
+            << "u:" << u.transpose() << std::endl <<"P:" << P << std::endl;//これで出力できるのつよすぎ(感嘆)
+            /*
             for(State hoge:x_series){
                 std::cout << "x-series are " << hoge.transpose() << std::endl;
             }
             for(State_Var fuga:P_series){
                 std::cout << "P-series are " << fuga << std::endl;
             }
+            */
             return;
         }
 
         void update(Encoder enc, Input_estimate est,Obs y_k){//1ステップ計算する
-            //auto の使用はできるだけ控えて欲しい　型がわからなくて読みづらいので
-            u = est.u;
+            set_u(est.get_input());
+
+            //std::cout<<"u:";
+            //show_u();
+            //std::cout<<std::endl;
             // 時間更新式
             State x_middle = state_evolution(x,u);// x_k+1|k
             State_Var P_middle = evo_update_state_var(P,x,u);// P_k+1|k //引数不明
@@ -100,8 +114,8 @@ namespace Kalman
             Gain K = est_update_gain(P_middle);
             State x_new = est_update_state(x_middle,u,y_k,K);//x_k+1|k+1
             State_Var P_new = est_update_state_var(P_middle,K);//P_k+1|k+1
-        
-            // x[4],Pともに更新
+
+            // x,Pともに更新
             x_series.erase(x_series.begin());
             x_series.push_back(x_new);
             P_series.erase(P_series.begin());
@@ -112,40 +126,42 @@ namespace Kalman
 
         void output(){//状態の出力
             std::cout<<x.transpose()<<std::endl;
-            //cout << "state is "<< x.transpose() << ", observable is " << y.transpose() <<endl;//<< ", input is " 
-            //<< u.transpose() << ", variation of state is " << P << endl;
         }
 
-        State state_evolution(const State &x, const Input &u){
+        std::vector<State> get_x_series(){ return x_series; }
+
+        State state_evolution(const State &x_k, const Input &u_k){
             State x_next;
-            x_next(0) = x(0) + u(0) * cos(x(2))*dt;
-            x_next(1) = x(1) + u(0) * sin(x(2))*dt;
-            x_next(2) = x(2) + u(1) *dt;
+            double delta_t = get_dt();
+            x_next(0) = x_k(0) + u_k(0) * cos(x(2))*delta_t;
+            x_next(1) = x_k(1) + u_k(0) * sin(x(2))*delta_t;
+            x_next(2) = x_k(2) + u_k(1) *delta_t;
             return x_next;
         }
 
-        Obs observe_evolution(const State &x, const Input &u){
-            Obs y;
-            y(0) = x(0), y(1) = x(1), y(2)= u(1);
+        Obs observe_evolution(const State &x_k, const Input &u_k){
+            Obs y_next;
+            y_next(0) = x_k(0), y_next(1) = x_k(1), y_next(2)= u_k(1);
             for (int i = 0; i < 3; i++)
             {
-                y[i+3] = enc_transformation(i,u);   
+                y_next(i+3) = enc_transformation(i,u);   
             }
-            return y;
+            return y_next;
         }
 
-        double enc_transformation(const int &i, const Input &u){
-            double pos = car.e[i](0)*u(0);
-            auto vel = (car.e[i].transpose())*Rotation2d(PI/2.0)*car.d[i]*u(0);
+        double enc_transformation(const int &i, const Input &u_k){
+            double pos = car.e[i](0)*u_k(0);
+            auto vel = (car.e[i].transpose())*Rotation2d(PI/2.0)*car.d[i]*u_k(0);
             return (pos + vel(0))/car.a;
         }
     
         matrix3d F_est(const State &x, const Input &u){
             matrix3d F = Eigen::MatrixXd::Zero(3, 3);
+            double delta_t = get_dt();
             F(0,0) = 1;
-            F(0,2) = -u(0)*sin(x(2))*dt ;
+            F(0,2) = -u(0)*sin(x(2))*delta_t ;
             F(1,1) = 1;
-            F(1,2) = u(0)*cos(x(2))*dt ;
+            F(1,2) = u(0)*cos(x(2))*delta_t ;
             F(2,2) = 1;
             return F;
         }
@@ -162,24 +178,24 @@ namespace Kalman
             return P_before*H_est().transpose()*(content_of_Inv).inverse();
         }
 
-        State est_update_state(const State &x, const Input &u, const Obs &y,const Gain &K){
-            return x + K * (y-observe_evolution(x,u));
+        State est_update_state(const State &x_k, const Input &u_k, const Obs &y_k,const Gain &K){
+            return x_k + K * (y_k-observe_evolution(x_k,u_k));
         }
 
         State_Var est_update_state_var(const State_Var &P_before, const Gain &K){
             return P_before - K*H_est()*P_before;
         }
 
-        State_Var evo_update_state_var(const State_Var &x_after, const State &x,const Input &u){
-            matrix3d F = F_est(x,u);
+        State_Var evo_update_state_var(const State_Var &x_after, const State &x_k,const Input &u_k){
+            matrix3d F = F_est(x_k,u_k);
             return F*x_after*F.transpose()+car.Xi;
         }
 
 
-        matrix2d Rotation2d(const double theta){
+        matrix2d Rotation2d(const double theta_k){
             matrix2d R;
-            R << cos(theta),-sin(theta),
-                sin(theta),cos(theta);
+            R << cos(theta_k),-sin(theta_k),
+                sin(theta_k),cos(theta_k);
             return R;
         }    
     };
