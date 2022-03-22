@@ -12,7 +12,11 @@ namespace Kalman
         int x,y,z;
     }Scale;
 
+<<<<<<< HEAD
     typedef struct{
+=======
+    typedef struct _camera{
+>>>>>>> 367bb4c44e37e17fa568278f03d66efea0749324
         double x,y;
     }Camera;
 

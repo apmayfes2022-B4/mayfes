@@ -46,6 +46,7 @@ int main(int argc,char const *argv[]){
     //逐一フィルタで計算
     while(go_on==1){
         // 観測
+<<<<<<< HEAD
         std::cin >> input_type;//うまいことやってinput_typeでどっちが来たか判断
         if(input_type==0){//encorder
             std::cin >> ee.x >> ee.y >> ee.z;
@@ -58,6 +59,26 @@ int main(int argc,char const *argv[]){
             calc(enc,est,ekf,y_now,ee);
         }else{
             go_on = 0;
+=======
+        Kalman::Camera came;
+        double w_j;
+        Kalman::Scale ee;
+        bool cc;
+        std::cin >> came.x >> came.y >> w_j >> ee.x >> ee.y >> ee.z >> cc;//入力
+        Obs y_now;
+        y_now << came.x, came.y, ekf.y(2)+w_j, ee.x, ee.y, ee.z;//ekf.y(2)+w_j
+        /*
+        1.0 1.0 0.5 1 2 4 1
+        2.0 0.0 0.5 2 2 3 1
+        3.0 1.0 0.5 3 2 2 1
+        4.0 1.0 0.5 4 2 1 0
+        10.0258 0.0581536 0.015383 1 0 0 1
+        こんな感じの入力をしてデバッグしてみてください
+        */
+
+        if(cc == 0){
+            go_on = false;//終了判断
+>>>>>>> 367bb4c44e37e17fa568278f03d66efea0749324
         }
     }
     return 0;
