@@ -49,6 +49,20 @@ volatile long motor_val1 = 0;
 volatile long motor_val2 = 0;
 volatile long motor_val3 = 0;
 
+// 位置に関する変数
+volatile float start_x = 0;
+volatile float start_y = 0;
+volatile float target_x = 0;
+volatile float target_y = 0;
+volatile float cur_x = 0;
+volatile float cur_y = 0;
+
+// 位置に関する定数
+const float POSITION_EPSILON = 1.0;// 目的地までどれくらい近くなったら止まるか
+
+// すでにとまったかどうか
+volatile int stopped = 0;
+
 void update_encoder() {
   oldPosition1 = newPosition1;
   oldPosition2 = newPosition2;
@@ -86,6 +100,14 @@ void velocity_bangbang(start_x, start_y, target_x, target_y) {
   motor_output(motor_val1, motor_val2, motor_val3);
 }
 
+void stop_or_not(cur_x, cur_y, target_x, target_y) {
+  // 目的位置に十分近くなったら止まる
+  if (pow(cur_x-target_x,2) + pow(cur_y-target_y,2) < POSITION_EPSILON){
+    stopped = 1;
+    motor_output(0,0,0);
+  }
+}
+
 void PI_control_direction() {
   float enc_diff1 = newPosition1 - oldPosition1;
   float enc_diff2 = newPosition2 - oldPosition2;
@@ -119,11 +141,17 @@ void setup() {
   pinMode(MOTOR_2B, OUTPUT);
   pinMode(MOTOR_3A, OUTPUT);
   pinMode(MOTOR_3B, OUTPUT);
+
+  // start_x, start_y, target_x, target_y を取得する（ソフトウェア班から)
   
   velocity_bangbang(start_x, start_y, target_x, target_y);
 }
 
 
 void loop() {
-  PI_control_direction();
+  if (stopped == 0){
+    // cur_x, cur_yを取得する（自己位置推定班から）
+    PI_control_direction();
+    stop_or_not(cur_x, cur_y, target_x, target_y);
+  }
 }
