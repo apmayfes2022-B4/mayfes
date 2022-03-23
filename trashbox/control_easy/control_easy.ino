@@ -57,13 +57,8 @@ volatile float target_y = 0;
 volatile float cur_x = 0;
 volatile float cur_y = 0;
 
-// 速さのP制御で使う変数（P制御の定数だが，初速によってきめる）
-volatile float Kp_motor1vel = 0;
-volatile float Kp_motor2vel = 0;
-volatile float Kp_motor3vel = 0;
-
-// 位置に関する定数
-const float POSITION_EPSILON = 1.0;// 目的地までどれくらい近くなったら止まるか
+// 速さのP制御で使う定数
+volatile float Kp_velocity = 1;
 
 // すでにとまったかどうか
 volatile int stopped = 0;
@@ -87,38 +82,7 @@ void motor_output(motor1, motor2, motor3) {
   analogWrite(MOTOR_3B, max(-motor3, 0));
 }
 
-void velocity_bangbang(start_x, start_y, target_x, target_y) {
-  // ここに速度に関する制御の初期化を書く．
-  // 3つのモーターに対する出力の総和は0になる．
-  float delta_x = target_x - start_x;
-  float delta_y = target_y - start_y;
-  float distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
-  motor_val1 = delta_y;
-  motor_val2 = (sqrt(3)*delta_x - delta_y)/2;
-  motor_val3 = (- sqrt(3)*delta_x - delta_y)/2;
-
-  max_motor_val = max(motor_val1, motor_val2, motor_val3);
-  motor_val1 = 255 * motor_val1 / max_motor_val;
-  motor_val2 = 255 * motor_val2 / max_motor_val;
-  motor_val3 = 255 * motor_val3 / max_motor_val;
-
-  // 初速を計算したのでP制御の定数が決定できる
-  Kp_motor1vel = motor_val1 / distance;
-  Kp_motor2vel = motor_val2 / distance;
-  Kp_motor3vel = motor_val3 / distance;
-
-  motor_output(motor_val1, motor_val2, motor_val3);
-}
-
-void stop_or_not(cur_x, cur_y, target_x, target_y) {
-  // 目的位置に十分近くなったら止まる
-  if (pow(cur_x-target_x,2) + pow(cur_y-target_y,2) < POSITION_EPSILON){
-    stopped = 1;
-    motor_output(0,0,0);
-  }
-}
-
-void PI_control_direction() {
+void PI_control_direction(int & direction_correct) {
   float enc_diff1 = newPosition1 - oldPosition1;
   float enc_diff2 = newPosition2 - oldPosition2;
   float enc_diff3 = newPosition3 - oldPosition3;
@@ -127,13 +91,37 @@ void PI_control_direction() {
   Rtheta = Rtheta + delta_Rtheta;
   delta_Rtheta_sum = delta_Rtheta_sum + (0 - Rtheta);
 
-  motor_val1 = motor_val1 + Kp_direction * (0 - Rtheta) + Ki_direction * delta_Rtheta_sum;
-  motor_val2 = motor_val2 + Kp_direction * (0 - Rtheta) + Ki_direction * delta_Rtheta_sum;
-  motor_val3 = motor_val3 + Kp_direction * (0 - Rtheta) + Ki_direction * delta_Rtheta_sum;
+  direction_correct = Kp_direction * (0 - Rtheta) + Ki_direction * delta_Rtheta_sum;
+  // 255より大きかったり-255より小さかったりすると bangbang_and_P_control_velocity でバグる．
+  direction_correct = min(direction_correct, 255);
+  direction_correct = max(direction_correct, -255);
 }
 
-void P_control_velocity() {
-  motor_val1 = motor_val1 
+void bangbang_and_P_control_velocity(direction_correct) {
+  // ここに速度に関する制御の初期化を書く．
+  // 3つのモーターに対する出力の総和は0になる．
+  float delta_x = target_x - start_x;
+  float delta_y = target_y - start_y;
+  float distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
+
+  // P制御
+  motor_val1 = Kp_velocity * delta_y;
+  motor_val2 = Kp_velocity * (sqrt(3)*delta_x - delta_y) / 2;
+  motor_val3 = Kp_velocity * (- sqrt(3)*delta_x - delta_y) / 2;
+
+  // オーバーフローする場合はオーバーフローするギリギリにする．結果的にbangbang制御になる．
+  // ここで決めた出力にdirection_correctが加算されることに注意する．
+  // ところで abs(direction_correct)が255よりデカいとバグる気がする．
+  long available_min = - 255 - direction_correct;
+  long available_max = 255 - direction_correct;
+  float min_motor_val = min(motor_val1, motor_val2, motor_val3);
+  float max_motor_val = max(motor_val1, motor_val2, motor_val3);
+  if (min_motor_val < available_min or max_motor_val > available_max) {
+    float bangbang_ratio = min(available_max/max_motor_val, available_min/min_motor_val);
+    motor_val1 = bangbang_ratio * motor_val1;
+    motor_val2 = bangbang_ratio * motor_val2;
+    motor_val3 = bangbang_ratio * motor_val3;
+  }
 }
 
 void setup() {
@@ -153,21 +141,24 @@ void setup() {
   pinMode(MOTOR_2B, OUTPUT);
   pinMode(MOTOR_3A, OUTPUT);
   pinMode(MOTOR_3B, OUTPUT);
-
-  // start_x, start_y, target_x, target_y を取得する（ソフトウェア班から)
-  
-  velocity_bangbang(start_x, start_y, target_x, target_y);
 }
 
 
 void loop() {
-  if (stopped == 0){
+  // cur_x, cur_y （自己位置推定班）から取得する関数をここに入れる．
+  // start_x, start_y, target_x, target_y （ソフトウェア班）を毎ループ更新する関数をここに入れる．そのままの値でも良い．あるいは変更時に割り込みでもよい．
 
-    // cur_x, cur_yを取得する（自己位置推定班から）
+  update_encoder();
+  
+  // 向きの補正のために各モーターの出力に加算する値
+  float direction_correct = 0;
+  PI_control_direction(direction_correct);
 
-    P_control_velocity();// 速さに関するP制御．最悪これだけコメントアウトしても動くはず．
-    PI_control_direction();// 向きに関するPI制御（速さに関するP制御で得た値を回転するように上書き）
-    stop_or_not(cur_x, cur_y, target_x, target_y);// ゴール近くについたら止める
-    motor_output(motor_val1, motor_val2, motor_val3);
-  }
+  // direction_correctの値を用いてオーバーフローしないように次に出力する速さを決定
+  bangbang_and_P_control_velocity(direction_correct);
+  motor_val1 = motor_val1 + direction_correct; 
+  motor_val2 = motor_val2 + direction_correct; 
+  motor_val3 = motor_val3 + direction_correct; 
+  
+  motor_output(motor_val1, motor_val2, motor_val3);
 }
