@@ -9,21 +9,24 @@
 void set_up(Kalman::Encoder enc,Kalman::Input_estimate est,Kalman::EKF ekf){
     //周期　このペースで入力が必ずあるものと仮定する
     //パラメタ==================================
-    enc.dt = 0.001;//高速入力
-    est.dt = 0.01;//数学的な計算過程
-    ekf.dt = 0.01;//数学的な計算過程,カメラの周波数に対応
+    
+    enc.set_dt(0.001);//高速入力
+    est.set_dt(0.01);//数学的な計算過程
+    ekf.set_dt(0.01);//数学的な計算過程
+    
     //=========================================
     //セットアップ ここで0以外の値をいれることにする。例としては ekf.y.x_c = 1;とか
     return;
 }
 
 void calc(Kalman::Encoder enc,Kalman::Input_estimate est,Kalman::EKF ekf,Obs y_now,Kalman::Scale ee){
-    //enc.update(ee);
-    est.update(ekf.x_series);
-    ekf.update(enc,est,y_now);//ここの実装を期待してます。//推定(線形補間)の実行もここの中
-    ekf.output();//x_k|kを出力
+    est.update(ekf.get_x_series());
+    ekf.update(enc,est,y_now);
+    ekf.debug();
+    //ekf.output();//x_k|kを出力
     return;
 }
+
 
 
 //グローバルに defineしたい定数
