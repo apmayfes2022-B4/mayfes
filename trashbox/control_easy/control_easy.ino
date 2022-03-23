@@ -57,6 +57,11 @@ volatile float target_y = 0;
 volatile float cur_x = 0;
 volatile float cur_y = 0;
 
+// 速さのP制御で使う変数（P制御の定数だが，初速によってきめる）
+volatile float Kp_motor1vel = 0;
+volatile float Kp_motor2vel = 0;
+volatile float Kp_motor3vel = 0;
+
 // 位置に関する定数
 const float POSITION_EPSILON = 1.0;// 目的地までどれくらい近くなったら止まるか
 
@@ -85,9 +90,9 @@ void motor_output(motor1, motor2, motor3) {
 void velocity_bangbang(start_x, start_y, target_x, target_y) {
   // ここに速度に関する制御の初期化を書く．
   // 3つのモーターに対する出力の総和は0になる．
-  // やればすぐできる，はず．
   float delta_x = target_x - start_x;
   float delta_y = target_y - start_y;
+  float distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
   motor_val1 = delta_y;
   motor_val2 = (sqrt(3)*delta_x - delta_y)/2;
   motor_val3 = (- sqrt(3)*delta_x - delta_y)/2;
@@ -96,6 +101,11 @@ void velocity_bangbang(start_x, start_y, target_x, target_y) {
   motor_val1 = 255 * motor_val1 / max_motor_val;
   motor_val2 = 255 * motor_val2 / max_motor_val;
   motor_val3 = 255 * motor_val3 / max_motor_val;
+
+  // 初速を計算したのでP制御の定数が決定できる
+  Kp_motor1vel = motor_val1 / distance;
+  Kp_motor2vel = motor_val2 / distance;
+  Kp_motor3vel = motor_val3 / distance;
 
   motor_output(motor_val1, motor_val2, motor_val3);
 }
@@ -120,8 +130,10 @@ void PI_control_direction() {
   motor_val1 = motor_val1 + Kp_direction * (0 - Rtheta) + Ki_direction * delta_Rtheta_sum;
   motor_val2 = motor_val2 + Kp_direction * (0 - Rtheta) + Ki_direction * delta_Rtheta_sum;
   motor_val3 = motor_val3 + Kp_direction * (0 - Rtheta) + Ki_direction * delta_Rtheta_sum;
+}
 
-  motor_output(motor_val1, motor_val2, motor_val3);
+void P_control_velocity() {
+  motor_val1 = motor_val1 
 }
 
 void setup() {
@@ -150,8 +162,12 @@ void setup() {
 
 void loop() {
   if (stopped == 0){
+
     // cur_x, cur_yを取得する（自己位置推定班から）
-    PI_control_direction();
-    stop_or_not(cur_x, cur_y, target_x, target_y);
+
+    P_control_velocity();// 速さに関するP制御．最悪これだけコメントアウトしても動くはず．
+    PI_control_direction();// 向きに関するPI制御（速さに関するP制御で得た値を回転するように上書き）
+    stop_or_not(cur_x, cur_y, target_x, target_y);// ゴール近くについたら止める
+    motor_output(motor_val1, motor_val2, motor_val3);
   }
 }
