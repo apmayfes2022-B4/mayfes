@@ -1,10 +1,6 @@
 #ifndef ENCODER_CLASS__
 #define ENCODER_CLASS__
 
-//#include "../Eigen/Dense"
-#include "../others/dynamical_system.hh"
-//#include <iostream>
-
 
 namespace Kalman
 {
@@ -20,7 +16,7 @@ namespace Kalman
         double x,y;
     }Camera;
 
-    class Encoder:public dynamical_system
+    class Encoder
     {
     private:
     typedef struct{
@@ -31,6 +27,7 @@ namespace Kalman
 
         Time_series time_series;
         double trans_coefficient;//エンコーダ目盛りを回転角度に翻訳
+        double t_diff;
 
     public:
         Encoder(){
@@ -40,21 +37,25 @@ namespace Kalman
             time_series.y[1] = 0;
             time_series.z[0] = 0;
             time_series.z[1] = 0;
-            set_dt(0.001);
+            t_diff = 0.1;
             trans_coefficient = 0.01;
+        }
+
+        void set_t_diff(double time_d){
+            t_diff = time_d;
+            return;
         }
 
         std::vector<double> Omega(){//角速度の計算
             std::vector<double> omega(3); 
-            double delta_t = get_dt();
-            omega[0] = (time_series.x[1]-time_series.x[0])/delta_t*trans_coefficient;
-            omega[1] = (time_series.y[1]-time_series.y[0])/delta_t*trans_coefficient;
-            omega[2] = (time_series.z[1]-time_series.z[0])/delta_t*trans_coefficient;
+            omega[0] = (time_series.x[1]-time_series.x[0])/t_diff*trans_coefficient;
+            omega[1] = (time_series.y[1]-time_series.y[0])/t_diff*trans_coefficient;
+            omega[2] = (time_series.z[1]-time_series.z[0])/t_diff*trans_coefficient;
             return omega;
         }
 
         void show_Omega(){
-            double delta_t = get_dt();
+            double delta_t = t_diff;
             std::cout<<"omega[0] = "<<(time_series.x[1]-time_series.x[0])/delta_t*trans_coefficient<<"omega[1] = "<<(time_series.y[1]-time_series.y[0])/delta_t*trans_coefficient<<"omega[2] = "<<(time_series.z[1]-time_series.z[0])/delta_t*trans_coefficient<<std::endl;
             return;
         }
