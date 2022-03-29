@@ -142,7 +142,7 @@ namespace Kalman
             return y_next;
         }
 
-        Obs make_encoder_omega(Obs y_k){
+        Obs make_encoder_omega(const Obs &y_k){
             Obs y_made;
             vector2d v_l;
             v_l(0) = (x_series[1](0)-x_series[2](0))/t_diff;
