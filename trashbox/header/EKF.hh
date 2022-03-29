@@ -20,7 +20,7 @@ namespace Kalman
         
             Car(){//初期化
                 theta = 0;
-                a = 1;
+                a = 2;
                 vector2d d1(1.0,0);
                 vector2d d2(-1.0,0);
                 vector2d d3(0,1.71);

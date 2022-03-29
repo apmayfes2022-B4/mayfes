@@ -34,7 +34,7 @@ namespace Kalman
             time_series.z[0] = 0;
             time_series.z[1] = 0;
             t_diff = 0.1;
-            trans_coefficient = 0.01;
+            trans_coefficient = 1/10000.0;
         }
 
         void set_t_diff(double time_d){
