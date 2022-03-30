@@ -34,7 +34,7 @@ namespace Kalman
             time_series.z[0] = 0;
             time_series.z[1] = 0;
             t_diff = 0.1;
-            trans_coefficient = 0.01;
+            trans_coefficient = 1/10000.0;
         }
 
         void set_t_diff(double time_d){
@@ -44,15 +44,17 @@ namespace Kalman
 
         std::vector<double> Omega(){//角速度の計算
             std::vector<double> omega(3); 
-            omega[0] = (time_series.x[1]-time_series.x[0])/t_diff*trans_coefficient;
-            omega[1] = (time_series.y[1]-time_series.y[0])/t_diff*trans_coefficient;
-            omega[2] = (time_series.z[1]-time_series.z[0])/t_diff*trans_coefficient;
+            omega[0] = 2.0*PI*(time_series.x[1]-time_series.x[0])/t_diff*trans_coefficient;
+            omega[1] = 2.0*PI*(time_series.y[1]-time_series.y[0])/t_diff*trans_coefficient;
+            omega[2] = 2.0*PI*(time_series.z[1]-time_series.z[0])/t_diff*trans_coefficient;
             return omega;
         }
 
         void show_Omega(){
             double delta_t = t_diff;
-            std::cout<<"omega[0] = "<<(time_series.x[1]-time_series.x[0])/delta_t*trans_coefficient<<"omega[1] = "<<(time_series.y[1]-time_series.y[0])/delta_t*trans_coefficient<<"omega[2] = "<<(time_series.z[1]-time_series.z[0])/delta_t*trans_coefficient<<std::endl;
+            std::cout<<"omega[0] = "<<2.0*PI*(time_series.x[1]-time_series.x[0])/delta_t*trans_coefficient
+            <<"omega[1] = "<<2.0*PI*(time_series.y[1]-time_series.y[0])/delta_t*trans_coefficient
+            <<"omega[2] = "<<2.0*PI*(time_series.z[1]-time_series.z[0])/delta_t*trans_coefficient<<std::endl;
             return;
         }
 

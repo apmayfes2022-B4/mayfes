@@ -20,7 +20,7 @@ namespace Kalman
         
             Car(){//初期化
                 theta = 0;
-                a = 1;
+                a = 2;
                 vector2d d1(1.0,0);
                 vector2d d2(-1.0,0);
                 vector2d d3(0,1.71);
@@ -104,14 +104,14 @@ namespace Kalman
 
         void update(double input_type, Obs y_k){//1ステップ計算する
             // 時間更新式
-            State x_middle = state_evolution();// x_k+1|k
+            State x_middle = state_evolution();// x_k+1|k 状態を線形補間
             State_Var P_middle = evo_update_state_var();// P_k+1|k //引数不明
             linear_make_del_state();
             if(input_type==0){//encorder
                 y_k(0) = x_middle(0);
                 y_k(1) = x_middle(1);
             }else if(input_type==1){
-                y_k = make_encoder_omega(y_k);
+                y_k = make_encoder_omega(y_k);//線形補間した入力とカメラ位置から観測を計算
             }
             // 観測更新
             Gain K = est_update_gain(P_middle);
@@ -161,7 +161,7 @@ namespace Kalman
             return y_next;
         }
 
-        Obs make_encoder_omega(Obs y_k){//補完方法後で考える
+        Obs make_encoder_omega(const Obs &y_k){
             Obs y_made;
             vector2d v_l;
             //v_l(0) = (x_series[1](0)-x_series[2](0))/t_diff;
