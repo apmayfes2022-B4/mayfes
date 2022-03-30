@@ -51,12 +51,12 @@ int main(int argc,char const *argv[]){
             enc.set_t_diff(t_diff);
             enc.update(ee);
             omega = enc.Omega();
-            y_now << came.x, came.y, omega[1], omega[2], omega[3];
+            y_now << came.x, came.y, omega[0], omega[1], omega[2];
             ekf.set_t_diff(t_diff);
             ekf.update(input_type,y_now);
         }else if(input_type == 1){//camera
             std::cin >> came.x >> came.y;
-            y_now << came.x, came.y,omega[1], omega[2], omega[3];
+            y_now << came.x, came.y,omega[0], omega[1], omega[2];
             ekf.set_t_diff(t_diff);
             ekf.update(input_type,y_now);
         }else{

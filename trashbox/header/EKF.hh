@@ -94,13 +94,13 @@ namespace Kalman
 
         void update(double input_type, Obs y_k){//1ステップ計算する
             // 時間更新式
-            State x_middle = state_evolution();// x_k+1|k
+            State x_middle = state_evolution();// x_k+1|k 状態を線形補間
             State_Var P_middle = evo_update_state_var();// P_k+1|k //引数不明
             if(input_type==0){//encorder
                 y_k(0) = x_middle(0);
                 y_k(1) = x_middle(1);
             }else if(input_type==1){
-                y_k = make_encoder_omega(y_k);
+                y_k = make_encoder_omega(y_k);//線形補間した入力とカメラ位置から観測を計算
             }
             // 観測更新
             Gain K = est_update_gain(P_middle);
