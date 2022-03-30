@@ -1,7 +1,7 @@
 CC = g++
 CFLAGS = -std=c++17
-TARGET = bin/make_debug_data
-SRCS = make_debug_data.cpp
+TARGET = make_rotation
+SRCS = make_rotation.cpp
 OBJS = $(SRCS:.cpp=.o)
 INCDIR = -I includes/include.hh
 LIBDIR =
