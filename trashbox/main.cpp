@@ -9,6 +9,7 @@
 void set_up(Kalman::Encoder enc,Kalman::EKF ekf){
     //周期　このペースで入力が必ずあるものと仮定する
     //パラメタ==================================
+    ekf.set_up_car_var(1e-6,1e-6);
     //=========================================
     //セットアップ ここで0以外の値をいれることにする。例としては ekf.y.x_c = 1;とか
     return;
@@ -19,12 +20,13 @@ void set_up(Kalman::Encoder enc,Kalman::EKF ekf){
 //グローバルに defineしたい定数
 bool go_on = true;//入力がつづくかどうか
 bool awake = 0;//カメラデータが入ったかどうか
+//int count = 0;
 
 int main(int argc,char const *argv[]){
     //エンコーダ　と　推定機　と　カルマンフィルタのセットアップ     //多分もっと頭の良い書き方があるけど、とりまこれで
     Kalman::Encoder enc;
     Kalman::EKF ekf;
-    //set_up(enc,ekf);//初期値の設定　getcmdoptionの実装面倒なので許して
+    set_up(enc,ekf);//初期値の設定　getcmdoptionの実装面倒なので許して
 
     Kalman::Camera came;
     Kalman::Scale ee;
@@ -40,13 +42,16 @@ int main(int argc,char const *argv[]){
     
     //逐一フィルタで計算
     while(go_on==1){
+        //count++;
         // 観測
         std::cin >> input_type;//うまいことやってinput_typeでどっちが来たか判断
+        //std::cout << input_type <<" ";
         t_before = t_now;
         t_now += 0.001;//getTimeNow()
         t_diff = t_now - t_before;
         if(input_type == 0){//encorder
             std::cin >> ee.x >> ee.y >> ee.z;
+            //std::cout << ee.x <<" "<< ee.y <<" "<< ee.z<<std::endl;
             enc.set_t_diff(t_diff);
             enc.update(ee);
             omega = enc.Omega();
@@ -65,8 +70,9 @@ int main(int argc,char const *argv[]){
         }else{
             go_on = 0;
         }
-        ekf.output();
-        //ekf.debug();
+        //ekf.output();
+        //std::cout<<count<<std::endl;
+        ekf.debug();
     }
     return 0;
 }

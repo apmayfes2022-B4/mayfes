@@ -36,7 +36,7 @@ namespace Kalman
 
             void update_theta(double omega,double time_d){
                 theta += omega*time_d;
-                theta = fmod(theta,PI);
+                theta = fmod(theta+PI,2*PI)-PI;
                 return;
             }
         };
@@ -53,7 +53,7 @@ namespace Kalman
     public:
         //初期化　construct
         EKF(){//とりあえず全部0で初期化しておきます。0以外を入れたい時はmain.cpp の　set_up()で入れることにしましょう。
-            series_length = 5;
+            series_length = 5;//補完の長さ
             for(int i =0;i<series_length;i++){
                 State x0;
                 x0<<0,0,0;
@@ -68,6 +68,12 @@ namespace Kalman
             H(3,2) = 1/car.a*car.e[1].transpose()*Rotation2d(PI/2)*car.d[1];
             H(4,2) = 1/car.a*car.e[2].transpose()*Rotation2d(PI/2)*car.d[2];
             t_diff = 0.1;
+        }
+
+        void set_up_car_var(double xi_v,double eta_v){
+            car.Xi *= xi_v;
+            car.Eta *= eta_v;
+            return; 
         }
 
         void set_up_ekf(double x_s,double y_s){
@@ -90,9 +96,9 @@ namespace Kalman
         }
     
         void debug(){
-            std::cout << "debuging EKF" << std::endl;
-            std::cout << "x:" << x_series[series_length-1].transpose() <<std::endl
-            <<"P:" << P << std::endl;//これで出力できるのつよすぎ(感嘆)
+            //std::cout << "debuging EKF" << std::endl;
+            std::cout << "x:" << x_series[series_length-1].transpose() <<std::endl;
+            //<<"P:" << P << std::endl;//これで出力できるのつよすぎ(感嘆)
             return;
         }
 
@@ -104,9 +110,9 @@ namespace Kalman
 
         void update(double input_type, Obs y_k){//1ステップ計算する
             // 時間更新式
-            State x_middle = state_evolution();// x_k+1|k 状態を線形補間
-            State_Var P_middle = evo_update_state_var();// P_k+1|k //引数不明
-            linear_make_del_state();
+            State x_middle = state_evolution();// x_k|k-1 状態を線形補間
+            State_Var P_middle = evo_update_state_var();// P_k|k-1 //引数不明
+            linear_update_del_state();
             if(input_type==0){//encorder
                 y_k(0) = x_middle(0);
                 y_k(1) = x_middle(1);
@@ -115,8 +121,8 @@ namespace Kalman
             }
             // 観測更新
             Gain K = est_update_gain(P_middle);
-            State x_new = est_update_state(x_middle,K,y_k);//x_k+1|k+1
-            P = est_update_state_var(P_middle,K);//P_k+1|k+1
+            State x_new = est_update_state(x_middle,K,y_k);//x_k|k
+            P = est_update_state_var(P_middle,K);//P_k|k
             // x,P,wともに更新
             x_series.erase(x_series.begin());
             x_series.push_back(x_new);
@@ -134,11 +140,7 @@ namespace Kalman
 
         State state_evolution(){
             State x_now = x_series[series_length-1];
-            //State x_before = x_series[series_length-2];
             State x_est;
-            //x_est(0) = 2*x_now(0) - x_before(0);
-            //x_est(1) = 2*x_now(1) - x_before(1);
-            //x_est(2) = 2*x_now(2) - x_before(2);
             x_est(0) = x_now(0) + del_x(0)*t_diff;
             x_est(1) = x_now(1) + del_x(1)*t_diff;
             x_est(2) = x_now(2) + del_x(2)*t_diff;
@@ -164,12 +166,10 @@ namespace Kalman
         Obs make_encoder_omega(const Obs &y_k){
             Obs y_made;
             vector2d v_l;
-            //v_l(0) = (x_series[1](0)-x_series[2](0))/t_diff;
-            //v_l(1) = (x_series[1](1)-x_series[2](1))/t_diff;
             v_l(0) = del_x(0);
             v_l(1) = del_x(1);
             //v_l = linear_make_velocity();
-            double omega = x_series[2](2);
+            double omega = x_series[series_length-1](2);
             
             y_made(0) = y_k(0);
             y_made(1) = y_k(1);
@@ -179,9 +179,9 @@ namespace Kalman
             return y_made;
         }
 
-        void linear_make_del_state(){//線形近似　頭の悪い計算量になるので余裕があれば改善
+        void linear_update_del_state(){//線形近似　頭の悪い計算量になるので余裕があれば改善
             //計算用変数
-	        float x_sum = 0, x2_sum = 0, y_sum = 0, xy_cov = 0, a = 0, b = 0;
+	        double x_sum = 0, x2_sum = 0, y_sum = 0, xy_cov = 0;
 	        for(int i=0;i<series_length;i++){
 		        x_sum += i;
 		        x2_sum +=  i *  i;
@@ -190,7 +190,7 @@ namespace Kalman
 	        }
 	        del_x(0) = (series_length*xy_cov - x_sum*y_sum) / (series_length * x2_sum - x_sum*x_sum);
 
-            x_sum = 0, x2_sum = 0, y_sum = 0, xy_cov = 0, a = 0, b = 0;
+            x_sum = 0, x2_sum = 0, y_sum = 0, xy_cov = 0;
 	        for(int i=0;i<series_length;i++){
 		        x_sum += i;
 		        x2_sum +=  i *  i;
@@ -199,12 +199,12 @@ namespace Kalman
 	        }
 	        del_x(1) = (series_length*xy_cov - x_sum*y_sum) / (series_length * x2_sum - x_sum*x_sum);
 
-            x_sum = 0, x2_sum = 0, y_sum = 0, xy_cov = 0, a = 0, b = 0;
+            x_sum = 0, x2_sum = 0, y_sum = 0, xy_cov = 0;
 	        for(int i=0;i<series_length;i++){
 		        x_sum += i;
 		        x2_sum +=  i *  i;
-		        y_sum +=  x_series[i](1);
-		        xy_cov += i * x_series[i](1);
+		        y_sum +=  x_series[i](2);
+		        xy_cov += i * x_series[i](2);
 	        }
 	        del_x(2) = (series_length*xy_cov - x_sum*y_sum) / (series_length * x2_sum - x_sum*x_sum);
             return;
