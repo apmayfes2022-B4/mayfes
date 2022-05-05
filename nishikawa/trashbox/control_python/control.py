@@ -2,22 +2,24 @@ import numpy as np
 import RPi.GPIO as GPIO
 import time
 
-from ....kato.trashbox.header import EKF, Encoder # パスは適宜書き換えてください。
+from header import EKF, Encoder # パスは適宜書き換えてください。
 
 def get_start():
     return 0, 0
 
 def get_target():
-    return 500, 500
+    return 1000, -500
 
 def motorpin_setup(MOTOR_PIN, pwm):
     for pin in MOTOR_PIN.keys():
+        # print(pin, MOTOR_PIN[pin])
         GPIO.setup(MOTOR_PIN[pin], GPIO.OUT)
         pwm[pin] = GPIO.PWM(MOTOR_PIN[pin], 60)
         pwm[pin].start(0)
 
 def encoderpin_setup(ENCODER_PIN):
-    for pin in ENCODER_PIN.value():
+    for pin in ENCODER_PIN.values():
+        # print(pin)
         GPIO.setup(pin, GPIO.IN)
 
 def encoder_callback(pinA, pinB, i, encoder_val):
@@ -37,7 +39,7 @@ def PI_control_direction(theta, theta_sum, Kp_direction, Ki_direction):
 
     # 100より大きい場合はエラーを吐く。この場合、Kp_direction や Ki_direction を調整する。
     if direction_correct > 100:
-        raise Exception("`direction_correct` is too large.")
+        raise Exception("direction_correct is too large.")
 
     return direction_correct
 
@@ -45,9 +47,9 @@ def PI_control_direction(theta, theta_sum, Kp_direction, Ki_direction):
 def P_control_velocity(delta_x, delta_y, Kp_velocity, direction_correct):
     motor_val = [0]*3
     # P制御
-    motor_val[0] = Kp_velocity * delta_y;
-    motor_val[1] = Kp_velocity * ((3**0.5) * delta_x - delta_y) / 2;
-    motor_val[2] = Kp_velocity * (- (3**0.5) * delta_x - delta_y) / 2;
+    motor_val[0] = Kp_velocity * delta_y
+    motor_val[1] = Kp_velocity * ((3**0.5) * delta_x - delta_y) / 2
+    motor_val[2] = Kp_velocity * (- (3**0.5) * delta_x - delta_y) / 2
 
     # 絶対値が100を超えてしまう場合は、100を超えないギリギリにする。結果、最初の方はbangbang制御になる。
     # ここで決めた出力にdirection_correctが加算されることに注意する．
@@ -63,8 +65,8 @@ def P_control_velocity(delta_x, delta_y, Kp_velocity, direction_correct):
 
 def motor_output(pwm, motor_val):
     for i in (1,2,3):
-        pwm[f"{i}A"].ChangeDutyCycle(max(motor_val[i-1], 0))
-        pwm[f"{i}B"].ChangeDutyCycle(max(-motor_val[i-1], 0))
+        pwm['{}A'.format(i)].ChangeDutyCycle(max(motor_val[i-1], 0))
+        pwm['{}B'.format(i)].ChangeDutyCycle(max(-motor_val[i-1], 0))
 
 def control(enc, ekf, Kp_direction=1, Ki_direction=1, Kp_velocity=1,
         MOTOR_PIN = {'1A': 23, '1B': 24, '2A':25, '2B':12, '3A':17, '3B':27}, 
@@ -90,7 +92,7 @@ def control(enc, ekf, Kp_direction=1, Ki_direction=1, Kp_velocity=1,
 
     # 各エンコーダについて、pinAの立ち上がりもしくは立ち下がりが起こったときに検知し、callbackで指定されたコールバック関数を呼び出す
     for i in (1,2,3):
-        GPIO.add_event_detect(ENCODER_PIN[f'{i}A'], GPIO.BOTH, callback=lambda x:encoder_callback(x, ENCODER_PIN[f'{i}B'], i, encoder_val))
+        GPIO.add_event_detect(ENCODER_PIN['{}A'.format(i)], GPIO.BOTH, callback=lambda x:encoder_callback(x, ENCODER_PIN['{}B'.format(i)], i, encoder_val))
 
     # 時間に関する変数　enc, ekfで利用する
     t_now = time.time()
@@ -114,7 +116,7 @@ def control(enc, ekf, Kp_direction=1, Ki_direction=1, Kp_velocity=1,
 
         # エンコーダから速度と角速度を求める
         enc.set_t_diff(t_diff)
-        enc.update(encoder_val)
+        enc.update(dict(x=encoder_val[0],y=encoder_val[1],z=encoder_val[2]))
         omega = enc.Omega() # これがほしいっぽい
 
         # エンコーダから得た値を使って現在位置と現在角度が更新される。
@@ -130,9 +132,14 @@ def control(enc, ekf, Kp_direction=1, Ki_direction=1, Kp_velocity=1,
 
         # モーター出力
         motor_output(pwm, motor_val)
+        
+        # モーターの値をファイル出力
+        # with open('/home/pi/mayfes/trashbox/log_duty.txt', 'a') as f:
+        #     print("{} {} {}".format(motor_val[0],motor_val[1],motor_val[2]) , file=f)
 
 
 if __name__ == '__main__':
     GPIO.setmode(GPIO.BCM)
     enc = Encoder.Encoder() # エンコーダの値から速度や角速度を出してくれるオブジェクト
     ekf = EKF.EKF() # 推定をやってくれるオブジェクト
+    control(enc, ekf)
